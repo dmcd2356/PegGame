@@ -2,12 +2,6 @@
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /**
  *
  * @author dmcd2356
@@ -54,35 +48,16 @@ public class mainFrame extends javax.swing.JFrame {
         int moveIx;         // index of move in PossibleMoves list
         int parentIx;       // index of parent in NextMoves list
         int childIx;        // index of 1st child entry in NextMoves list
-        int[] stats;        // this holds the stats for each ending peg count
-/*
-        public HistoryStc () {
-            count  = 0;
-            layout_init = 0;
-            layout_end  = 0;
-            moveIx = -1;
-            parentIx = -1;
-            childIx = -1;
-        }
+        int endmask;        // this holds the ending peg count status (bit mask)
         
-        public HistoryStc (int layout) {
-            count  = 0;
-            layout_init = layout;
-            layout_end  = 0;
-            moveIx = -1;
-            parentIx = -1;
-            childIx = -1;
-        }
-*/
-        
-        public HistoryStc (int start, int end, int ix, int pcount, int parent) {
-            count  = pcount;
+        public HistoryStc (int start, int end, int move, int parent) {
+            count  = countPegs (start);
             layout_init = start;
             layout_end  = end;
-            moveIx = ix;
+            moveIx = move;
             parentIx = parent;
             childIx = -1;
-            stats = new int[8]; // at most there will be 8 pegs left
+            endmask = 0;
         }
         
         public void setFirstChild (int child) {
@@ -90,6 +65,16 @@ public class mainFrame extends javax.swing.JFrame {
         }
     };
 
+    private class PegLevels {
+        int  index;         // starting index of level
+        int  size;          // number of entries in level
+        
+        public PegLevels () {
+            index = 0;
+            size = 0;
+        }
+    }
+    
     // total number of starting pegs in game
     private final int NUMBER_OF_STARTING_PEGS = 14;
 
@@ -108,11 +93,13 @@ public class mainFrame extends javax.swing.JFrame {
     StateType  State;           // current peg move state
     int        Layout;          // current board layout in bit field format
     int        ListCount;       // number of total moves in linked list
+    int        CurrIx;          // index in NextMoves list for current position
     PegMoveStc CurrMove;        // current move information
     ArrayList<PegMoveStc> PossibleMoves; // array of possible moves
     LinkedList<PegMoveStc> PrevMoves; // queue of prev moves for undo to use
 
     ArrayList<HistoryStc> NextMoves; // array of possible moves
+    PegLevels[] MoveLevels;          // holds the index and size of each level in NextMoves
     
     /**
      * Creates new form mainFrame
@@ -120,9 +107,13 @@ public class mainFrame extends javax.swing.JFrame {
     public mainFrame() {
         initComponents();
         
+        CurrIx = 0; // this will reflect the 1st entry in table, which is the initial layout
         PrevMoves = new LinkedList<>();
         CurrMove = new PegMoveStc();
         NextMoves = new ArrayList<>();
+        MoveLevels = new PegLevels[NUMBER_OF_STARTING_PEGS];
+        for (int ix = 0; ix < NUMBER_OF_STARTING_PEGS; ix++)
+            MoveLevels[ix] = new PegLevels();
         
         // the peg numbering:
         //         01
@@ -133,43 +124,43 @@ public class mainFrame extends javax.swing.JFrame {
         //
         // setup the list of all possible moves so we can specify a move
         // by just the index into this list
-        PossibleMoves = new ArrayList<>();
-        PossibleMoves.add( new PegMoveStc( 1,  2,  4) );
-        PossibleMoves.add( new PegMoveStc( 1,  3,  6) );
-        PossibleMoves.add( new PegMoveStc( 2,  4,  7) );
-        PossibleMoves.add( new PegMoveStc( 2,  5,  9) );
-        PossibleMoves.add( new PegMoveStc( 3,  5,  8) );
-        PossibleMoves.add( new PegMoveStc( 3,  6, 10) );
-        PossibleMoves.add( new PegMoveStc( 4,  2,  1) );
-        PossibleMoves.add( new PegMoveStc( 4,  5,  6) );
-        PossibleMoves.add( new PegMoveStc( 4,  7, 11) );
-        PossibleMoves.add( new PegMoveStc( 4,  8, 13) );
-        PossibleMoves.add( new PegMoveStc( 5,  8, 12) );
-        PossibleMoves.add( new PegMoveStc( 5,  9, 14) );
-        PossibleMoves.add( new PegMoveStc( 6,  3,  1) );
-        PossibleMoves.add( new PegMoveStc( 6,  5,  4) );
-        PossibleMoves.add( new PegMoveStc( 6,  9, 13) );
-        PossibleMoves.add( new PegMoveStc( 6, 10, 15) );
-        PossibleMoves.add( new PegMoveStc( 7,  4,  2) );
-        PossibleMoves.add( new PegMoveStc( 7,  8,  9) );
-        PossibleMoves.add( new PegMoveStc( 8,  5,  3) );
-        PossibleMoves.add( new PegMoveStc( 8,  9, 10) );
-        PossibleMoves.add( new PegMoveStc( 9,  5,  2) );
-        PossibleMoves.add( new PegMoveStc( 9,  8,  7) );
-        PossibleMoves.add( new PegMoveStc(10,  6,  3) );
-        PossibleMoves.add( new PegMoveStc(10,  9,  8) );
-        PossibleMoves.add( new PegMoveStc(11,  7,  4) );
-        PossibleMoves.add( new PegMoveStc(11, 12, 13) );
-        PossibleMoves.add( new PegMoveStc(12,  8,  5) );
-        PossibleMoves.add( new PegMoveStc(12, 13, 14) );
-        PossibleMoves.add( new PegMoveStc(13,  8,  4) );
-        PossibleMoves.add( new PegMoveStc(13,  9,  6) );
-        PossibleMoves.add( new PegMoveStc(13, 12, 11) );
-        PossibleMoves.add( new PegMoveStc(13, 14, 15) );
-        PossibleMoves.add( new PegMoveStc(14,  9,  5) );
-        PossibleMoves.add( new PegMoveStc(14, 13, 12) );
-        PossibleMoves.add( new PegMoveStc(15, 10,  6) );
-        PossibleMoves.add( new PegMoveStc(15, 14, 13) );
+        PossibleMoves = new ArrayList<>();                  // moveIx
+        PossibleMoves.add( new PegMoveStc( 1,  2,  4) );    // 0
+        PossibleMoves.add( new PegMoveStc( 1,  3,  6) );    // 1
+        PossibleMoves.add( new PegMoveStc( 2,  4,  7) );    // 2
+        PossibleMoves.add( new PegMoveStc( 2,  5,  9) );    // 3
+        PossibleMoves.add( new PegMoveStc( 3,  5,  8) );    // 4
+        PossibleMoves.add( new PegMoveStc( 3,  6, 10) );    // 5
+        PossibleMoves.add( new PegMoveStc( 4,  2,  1) );    // 6
+        PossibleMoves.add( new PegMoveStc( 4,  5,  6) );    // 7
+        PossibleMoves.add( new PegMoveStc( 4,  7, 11) );    // 8
+        PossibleMoves.add( new PegMoveStc( 4,  8, 13) );    // 9
+        PossibleMoves.add( new PegMoveStc( 5,  8, 12) );    // 10
+        PossibleMoves.add( new PegMoveStc( 5,  9, 14) );    // 11
+        PossibleMoves.add( new PegMoveStc( 6,  3,  1) );    // 12
+        PossibleMoves.add( new PegMoveStc( 6,  5,  4) );    // 13
+        PossibleMoves.add( new PegMoveStc( 6,  9, 13) );    // 14
+        PossibleMoves.add( new PegMoveStc( 6, 10, 15) );    // 15
+        PossibleMoves.add( new PegMoveStc( 7,  4,  2) );    // 16
+        PossibleMoves.add( new PegMoveStc( 7,  8,  9) );    // 17
+        PossibleMoves.add( new PegMoveStc( 8,  5,  3) );    // 18
+        PossibleMoves.add( new PegMoveStc( 8,  9, 10) );    // 19
+        PossibleMoves.add( new PegMoveStc( 9,  5,  2) );    // 20
+        PossibleMoves.add( new PegMoveStc( 9,  8,  7) );    // 21
+        PossibleMoves.add( new PegMoveStc(10,  6,  3) );    // 22
+        PossibleMoves.add( new PegMoveStc(10,  9,  8) );    // 23
+        PossibleMoves.add( new PegMoveStc(11,  7,  4) );    // 24
+        PossibleMoves.add( new PegMoveStc(11, 12, 13) );    // 25
+        PossibleMoves.add( new PegMoveStc(12,  8,  5) );    // 26
+        PossibleMoves.add( new PegMoveStc(12, 13, 14) );    // 27
+        PossibleMoves.add( new PegMoveStc(13,  8,  4) );    // 28
+        PossibleMoves.add( new PegMoveStc(13,  9,  6) );    // 29
+        PossibleMoves.add( new PegMoveStc(13, 12, 11) );    // 30
+        PossibleMoves.add( new PegMoveStc(13, 14, 15) );    // 31
+        PossibleMoves.add( new PegMoveStc(14,  9,  5) );    // 32
+        PossibleMoves.add( new PegMoveStc(14, 13, 12) );    // 33
+        PossibleMoves.add( new PegMoveStc(15, 10,  6) );    // 34
+        PossibleMoves.add( new PegMoveStc(15, 14, 13) );    // 35
         
         // init the pegs
         initPegs();
@@ -223,7 +214,12 @@ public class mainFrame extends javax.swing.JFrame {
             Layout = pegGetLayout();
 
             // re-calculate future move statistics
-            updateFutureMoves(Layout);
+            int moveIx = NextMoves.get(CurrIx).parentIx;
+            if (moveIx >= 0) {
+                CurrIx = moveIx;
+                int endmask = NextMoves.get(CurrIx).endmask;
+                updateFutureMoves(endmask);
+            }
 
             // make sure we reset to pick a peg state (in case game ended)
             State = StateType.STATE_CHOOSE;
@@ -485,169 +481,152 @@ public class mainFrame extends javax.swing.JFrame {
     }
 
     /**
-     * For a given peg layout and the last move index, find the next valid move index.
-     * Adds the entry to the history buffer if valid.
+     * returns the index in NextMoves for the move selected
      * 
-     * @param layout - bitmask value of the specified peg layout
-     * @param lastMoveIx - index in PossibleMoves list of last move made
-     * @param parentIx - index in NextMoves of parent layout
-     * @return the index of the next valid move, -1 if no more moves
+     * @param moveIx - the index in PossibleMoves for the selected move
+     * @return index in NextMoves for the selection made (-1 if invalid inputs)
      */
-    private int getNextMoveIx (int layout, int lastMoveIx, int parentIx) {
-        int newLayout;
-        int pcount = countPegs (layout);
-        for (int ix = lastMoveIx + 1; ix < PossibleMoves.size(); ix++) {
-            newLayout = isValidMove (layout, PossibleMoves.get(ix));
-            if (newLayout != 0) {
-                // create an entry indicating the start and end layouts and
-                // the move that got us there and add it to the history list.
-                HistoryStc entry = new HistoryStc(layout, newLayout, ix, pcount, parentIx);
-                if (!NextMoves.contains(entry))
-                    NextMoves.add(entry);
+    private int getNext (int moveIx) {
+        if (CurrIx < 0 || CurrIx >= NextMoves.size()) {
+            System.out.println("Invalid value for CurrIx: " + CurrIx);
+            return -1;
+        }
+        if (CurrIx == 0) {
+            System.out.println("No more previous moves");
+            return 0;
+        }
+        int layout = NextMoves.get(CurrIx).layout_init;
+        int childIx = NextMoves.get(CurrIx).childIx;
+        
+        // make sure the node has a child
+        if (childIx < 0 || childIx >= NextMoves.size())
+            return -1;
 
-                // save index of 1st child in parent layout for forward reference
-                NextMoves.get(parentIx).setFirstChild(ix);
+        // search all the children of the current node
+        for (int ix = childIx; NextMoves.get(ix).parentIx == layout; ix++) {
+            // exit with the child index
+            if (NextMoves.get(ix).moveIx == moveIx) {
+                CurrIx = ix;
                 return ix;
             }
         }
+        
+        System.out.println("ERROR: child not found for CurrIx: " + CurrIx);
         return -1;
     }
     
-    private void extractMoves (int layout) {
+    /**
+     * For a given peg layout find all the next valid moves.
+     * Adds the entries to the history buffer if valid.
+     * 
+     * @param currIx   - index in NextMoves of current layout
+     * @param parentIx - index in NextMoves of parent layout
+     * @param layout   - bitmask value of the specified peg layout
+     * @return the number of entries added for this layout
+     */
+    private int saveNextMoves (int parentIx, int layout) {
+        int count = 0;
+        for (int moveIx = 0; moveIx < PossibleMoves.size(); moveIx++) {
+            int newLayout = isValidMove (layout, PossibleMoves.get(moveIx));
+            if (newLayout != 0) {
+                // create an entry indicating the start and end layouts and
+                // the move that got us there and the index in this list of
+                // its parent and add it to the history list.
+                ++count;
+                HistoryStc entry = new HistoryStc(layout, newLayout, moveIx, parentIx);
+                int currIx = NextMoves.indexOf(entry);
+                if (currIx < 0) {
+                    currIx = NextMoves.size(); // the size before we add the entry will be its index
+                    NextMoves.add(entry);
+                }
+
+                // save index of 1st child in parent layout for forward reference
+                if (parentIx >= 0 && NextMoves.get(parentIx).childIx == -1)
+                    NextMoves.get(parentIx).setFirstChild(currIx);
+            }
+        }
+        return count;
+    }
+    
+    private int extractMoves (int layout) {
         // run all of the layouts at this level of peg count
         int pcount = countPegs (layout);
         int totalsize = 0;
-        int lastMoveIx = -1; // indicates we did not have any prior move
-        int parentIx = -1; // index in NextMoves list of layout whose moves are being determined
-        for(int ix = 0; true; ix++) {
-            // add all the possible move entries for the current layout
-            while ((lastMoveIx = getNextMoveIx(layout, lastMoveIx, parentIx)) >= 0) {
-            }
 
-            // bump to next layout in list
-            if (ix >= NextMoves.size())
-                break;
-            layout = NextMoves.get(ix).layout_end;
+        // clear List of future moves
+        NextMoves.clear();
+
+        // create the entries of moves for the initial layout
+        saveNextMoves(-1, layout);
+        
+        // start with the initial layout as the 1st entry
+        // (note that the begin and end layouts are the same)
+//        HistoryStc entry = new HistoryStc(layout, layout, -1, pcount, parentIx);
+//        NextMoves.add(entry);
+
+        // now run through each entry in the table to get the next moves for each
+        // sibling at the current level
+        for(int parentIx = 0; parentIx < NextMoves.size(); parentIx++) {
+
+            // add all the possible move entries for the next terminating layout
+            // (this adds entries to NextMoves if there are any)
+            layout = NextMoves.get(parentIx).layout_end;
+            saveNextMoves(parentIx, layout);
+
+            // check if we have exhaused the current peg count moves and
+            // keep an array of where each new peg count starts in the list
+            // and how many entries in it
             int newpcount = countPegs (layout);
-            parentIx = ix;
-            
-            // check if we have exhaused the current peg count moves
             if (pcount != newpcount) {
                 int newsize = NextMoves.size();
                 pcount = newpcount;
                 System.out.println("level " + pcount + ": " + (newsize - totalsize) + " entries");
+                if (pcount <= NUMBER_OF_STARTING_PEGS && pcount > 0) {
+                    MoveLevels[pcount-1].index = totalsize;
+                    MoveLevels[pcount-1].size  = newsize - totalsize;
+                }
                 totalsize = newsize;
             }
-            lastMoveIx = -1;
         }
-    }
-    
-    /**
-     *  Determines the next valid move for the specified board layout.
-     *  Is passed the the current layout from the history list.
-     *  The moveIx value is the number of moves currently made.
-     *  It starts at the next move to make (starts at the 1st move if moveIx < 0),
-     *  looking for the next possible move.
-     * 
-     * @param history - current entry in history list
-     * @return true if valid move found
-     */
-/*
-    private boolean nextValidMove (HistoryStc history) {
-        int from_peg, over_peg, to_peg;
-        int layout;
-        int startIx;
-        
-        // start with next move (if index was negative, use 1st move found)
-        layout  = history.layout_init;
-        startIx = history.moveIx + 1;
-        if( startIx < 0 )
-            startIx = 0;
-        
-        // search for the next move
-        for( int ix = startIx; ix < PossibleMoves.size(); ix++ ) {
-            // get bit mask values for the peg move
-            PegMoveStc validMove = PossibleMoves.get(ix);
-            from_peg = 1 << (validMove.fromPeg - 1);
-            over_peg = 1 << (validMove.overPeg - 1);
-            to_peg   = 1 << (validMove.toPeg   - 1);
-    
-            // check if the peg is in the starting pos, the dest pos is available,
-            // and the peg to jump exists
-            if( (layout & from_peg) != 0 && (layout & over_peg) != 0 && (layout & to_peg) == 0 ) {
-                // determine new layout
-                layout &= ~(from_peg | over_peg); // remove these pegs
-                layout |= to_peg;  // set this peg
-                
-                // update the table index selection and ending layout
-                history.layout_end = layout;
-                history.moveIx = ix;
-                return true;
+
+        // now we need to find the stats for each move - start from the lowest level
+        int currmask = 0x01; // LSbit indicates path goes to single peg
+        for (int level = 0; level < NUMBER_OF_STARTING_PEGS; level++) {
+            int startIx = MoveLevels[level].index;
+            int length  = MoveLevels[level].size;
+            for (int ix = startIx; ix < startIx + length; ix++) {
+                // set the bit indicating we reached the current level
+                int childIx = NextMoves.get(ix).childIx;
+                if (childIx < 0)
+                    NextMoves.get(ix).endmask = currmask;
+                else {
+                    // this one has a child, so sum up all of the chilkdren end condition bits
+                    for (int nextix = childIx; nextix < NextMoves.size() && ix == NextMoves.get(nextix).parentIx; nextix++)
+                        NextMoves.get(ix).endmask |= NextMoves.get(nextix).endmask;
+                }
             }
+            
+            // update the lower order masks and the current bit mask
+            currmask <<= 1;
+            System.out.println("level " + (level+1) + ": completed");
         }
-    
-        history.layout_end = 0;
-        history.moveIx = -1;
-        return false;
+
+        return pcount;
     }
-*/
-    
+
     /**
      * determines the statistics for future moves given the layout.
      * Results are displayed in the gui.
      * 
-     * @param layout - bitmask value of the specified peg layout
+     * @param endmask - bitmask indicating possible peg count endings
      */
-    private void updateFutureMoves (int layout) {
-        // TODO: this will determine the location in NextMoves to extract
-        //       the statistics from.
-/*
-        int total_count = 0;
-        ArrayList<HistoryStc> history = new ArrayList();
-        
-        // get the starting number of pegs on the board
-        int count = countPegs(layout);
-        
-        // init the history buffer
-        // history is going to contain the number of remaining possible moves
-        // for each remaining number of pegs given the current starting count.
-        for (int ix = 0; ix < 15; ix++) {
-            if (ix == count)
-                history.add(new HistoryStc(layout));
-            else
-                history.add(new HistoryStc());
+    private void updateFutureMoves (int endmask) {
+        countTextArea.setText("");
+        for( int pegs = 1; pegs <=8; pegs++ ) {
+            int maskbit = 1 << pegs;
+            String value = (endmask & maskbit) == 0 ? "0":"1";
+            countTextArea.setText(countTextArea.getText() + pegs + " left: " + value + newLine);
         }
-        
-        int pegs;
-        int peg_term = count +1;
-        for(pegs = count; pegs <= count; pegs++)
-        {
-            // keep playing until no more moves can be made
-            while (pegs > 1) {
-                HistoryStc current = history.get(pegs);
-                if (!nextValidMove(current))
-                    break;
-                history.set(pegs-1, new HistoryStc(current.layout_end));
-                pegs--;
-            }
-    
-            // no more moves can be made using this route
-            // increment total routes and number of routes ending with this number of pegs
-            if( pegs != peg_term ) {
-                history.get(pegs).count++;
-                total_count++;
-            }
-    
-            // check for next possible solution for prev layout
-            peg_term = pegs + 1;
-        }
-    
-        // show final counts
-        countTextArea.setText("Total: " + total_count + newLine);
-        for( pegs = 1; pegs <=8; pegs++ ) {
-            countTextArea.setText(countTextArea.getText() + pegs + " left: " + history.get(pegs).count + newLine);
-        }
-*/
     }
     
     /**
@@ -659,6 +638,7 @@ public class mainFrame extends javax.swing.JFrame {
     private void pegMove (int peg) {
         int new_layout;
         int pegs_left;
+        int endmask;
         
         // clear out this field initially
         ratingTextField.setText("");
@@ -679,11 +659,12 @@ public class mainFrame extends javax.swing.JFrame {
             // save initial layout
             Layout = pegGetLayout();
     
-            NextMoves.clear();
-            extractMoves (Layout);
+            // determine all future moves
+            int count = extractMoves (Layout);
             
-            // calculate future move statistics
-            updateFutureMoves(Layout);
+            // calculate future move statistics from the initial setup
+            endmask = NextMoves.get(0).endmask;
+            updateFutureMoves(endmask);
     
             instructionsTextField.setText("select peg to move");
             State = StateType.STATE_CHOOSE;
@@ -735,14 +716,19 @@ public class mainFrame extends javax.swing.JFrame {
     
                 // check new location
                 pegSet(CurrMove.toPeg, true);
-    
+                
                 // save move in buffer
                 PrevMoves.add(new PegMoveStc(CurrMove));
     
-                // calculate future move statistics
-                updateFutureMoves(Layout);
-
                 logMove(CurrMove, false);
+
+                // get the move status following the specified move
+                int nextIx = getNext(moveIx);
+                endmask = NextMoves.get(nextIx).endmask;
+                
+                // update future move stats
+                updateFutureMoves(endmask);
+
                 instructionsTextField.setText("select next peg to move");
                 State = StateType.STATE_CHOOSE;
     
