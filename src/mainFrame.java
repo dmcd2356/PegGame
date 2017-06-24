@@ -1,4 +1,5 @@
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -113,14 +114,6 @@ public class mainFrame extends javax.swing.JFrame {
     public mainFrame() {
         initComponents();
         
-        CurrIx = 0; // this will reflect the 1st entry in table, which is the initial layout
-        PrevMoves = new LinkedList<>();
-        CurrMove = new PegMoveStc();
-        NextMoves = new ArrayList<>();
-        MoveLevels = new PegLevels[NUMBER_OF_STARTING_PEGS + 1];
-        for (int ix = 0; ix < NUMBER_OF_STARTING_PEGS + 1; ix++)
-            MoveLevels[ix] = new PegLevels();
-        
         // the peg numbering:
         //         01
         //       02  03
@@ -173,6 +166,14 @@ public class mainFrame extends javax.swing.JFrame {
     }
 
     private void initPegs () {
+        CurrIx = 0; // this will reflect the 1st entry in table, which is the initial layout
+        PrevMoves = new LinkedList<>();
+        CurrMove = new PegMoveStc();
+        NextMoves = new ArrayList<>();
+        MoveLevels = new PegLevels[NUMBER_OF_STARTING_PEGS + 1];
+        for (int ix = 0; ix < NUMBER_OF_STARTING_PEGS + 1; ix++)
+            MoveLevels[ix] = new PegLevels();
+        
         State = StateType.STATE_INIT;
         ListCount = 0;
         PrevMoves.clear();
@@ -181,11 +182,9 @@ public class mainFrame extends javax.swing.JFrame {
         ratingTextField.setText( "" );
         instructionsTextField.setText("choose a starting peg to remain open");
         movesTextPane.setText("");
-        countTextArea.setText("Total: 0" + newLine);
-        countTextArea.setText("");
-        for( int pegs = 1; pegs <=8; pegs++ ) {
-            countTextArea.setText(countTextArea.getText() + pegs + " left: 0" + newLine);
-        }
+        
+        // init final pegs indicator to enable all peg counts
+        updateFutureMoves(255 << 1);
 
         // init pegs
         for( int ix = 1; ix <= 15; ix++ ) {
@@ -638,12 +637,15 @@ public class mainFrame extends javax.swing.JFrame {
      * @param endmask - bitmask indicating possible peg count endings
      */
     private void updateFutureMoves (int endmask) {
-        countTextArea.setText("");
-        for( int pegs = 1; pegs <=8; pegs++ ) {
-            int maskbit = 1 << pegs;
-            String value = (endmask & maskbit) == 0 ? "0":"1";
-            countTextArea.setText(countTextArea.getText() + pegs + " left: " + value + newLine);
-        }
+        endmask >>= 1;
+        jLabel1.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel2.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel3.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel4.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel5.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel6.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel7.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
+        jLabel8.setForeground((endmask & 1) == 1 ? Color.black : Color.red); endmask >>= 1;
     }
     
     /**
@@ -799,8 +801,14 @@ public class mainFrame extends javax.swing.JFrame {
         pegRadioButton14 = new javax.swing.JRadioButton();
         instructionsTextField = new javax.swing.JTextField();
         ratingTextField = new javax.swing.JTextField();
-        countScrollPane = new javax.swing.JScrollPane();
-        countTextArea = new javax.swing.JTextArea();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
         movesPanel = new javax.swing.JPanel();
         movesScrollPane = new javax.swing.JScrollPane();
         movesTextPane = new javax.swing.JTextPane();
@@ -986,12 +994,21 @@ public class mainFrame extends javax.swing.JFrame {
                 .addContainerGap(20, Short.MAX_VALUE))
         );
 
-        countScrollPane.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        countScrollPane.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        jLabel1.setText("1 left");
 
-        countTextArea.setColumns(20);
-        countTextArea.setRows(5);
-        countScrollPane.setViewportView(countTextArea);
+        jLabel2.setText("2 left");
+
+        jLabel3.setText("3 left");
+
+        jLabel4.setText("4 left");
+
+        jLabel5.setText("5 left");
+
+        jLabel6.setText("6 left");
+
+        jLabel7.setText("7 left");
+
+        jLabel8.setText("8 left");
 
         javax.swing.GroupLayout pegBoardPanelLayout = new javax.swing.GroupLayout(pegBoardPanel);
         pegBoardPanel.setLayout(pegBoardPanelLayout);
@@ -1008,10 +1025,19 @@ public class mainFrame extends javax.swing.JFrame {
                 .addGroup(pegBoardPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(instructionsTextField)
                     .addGroup(pegBoardPanelLayout.createSequentialGroup()
-                        .addComponent(countScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(20, 20, 20)
+                        .addGap(16, 16, 16)
+                        .addGroup(pegBoardPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel4)
+                            .addComponent(jLabel5)
+                            .addComponent(jLabel6)
+                            .addComponent(jLabel7)
+                            .addComponent(jLabel8))
+                        .addGap(97, 97, 97)
                         .addComponent(pegsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 65, Short.MAX_VALUE)))
+                        .addGap(0, 80, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(pegBoardPanelLayout.createSequentialGroup()
                 .addContainerGap()
@@ -1023,11 +1049,24 @@ public class mainFrame extends javax.swing.JFrame {
             .addGroup(pegBoardPanelLayout.createSequentialGroup()
                 .addGap(58, 58, 58)
                 .addGroup(pegBoardPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(countScrollPane)
+                    .addComponent(pegsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(pegBoardPanelLayout.createSequentialGroup()
-                        .addComponent(pegsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 98, Short.MAX_VALUE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel5)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel6)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel7)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 81, Short.MAX_VALUE)
                 .addComponent(instructionsTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(ratingTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1175,9 +1214,15 @@ public class mainFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane countScrollPane;
-    private javax.swing.JTextArea countTextArea;
     private javax.swing.JTextField instructionsTextField;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JTabbedPane mainTabbedPane;
     private javax.swing.JPanel movesPanel;
     private javax.swing.JScrollPane movesScrollPane;
